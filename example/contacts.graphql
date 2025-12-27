@@ -1,0 +1,71 @@
+# @base("/v1/contacts")
+# @models("example/types")
+
+type Calls {
+    createContact(input: CreateContactInput!): Contact @post("/")
+    getContact(id: ID!): Contact @get("/{id}")
+    updateContact(id: ID!, input: UpdateContactInput!): Contact @put("/{id}")
+    deleteContact(id: ID!): DeleteResult @delete("/{id}")
+    listContacts(filter: ContactFilter): ContactList @get("/")
+    
+    # Example with multiple path params and body
+    updateLocation(iso2: String!, stateCode: String!, location: LocationUpdate!): Location @put("/locations/{iso2}/states/{stateCode}")
+    
+    # Example with complex query param (gorilla/schema)
+    searchLocations(query: LocationQuery): LocationList @get("/locations/search")
+}
+
+type Contact {
+    id: ID!
+    name: String!
+    email: String
+    createdAt: Time
+}
+
+input CreateContactInput {
+    name: String!
+    email: String!
+}
+
+input UpdateContactInput {
+    name: String
+    email: String
+}
+
+input ContactFilter {
+    search: String
+    limit: Int
+    offset: Int
+}
+
+type ContactList {
+    items: [Contact!]!
+    total: Int!
+}
+
+type DeleteResult {
+    success: Boolean!
+}
+
+type Location {
+    iso2: String!
+    stateCode: String!
+    name: String!
+}
+
+input LocationUpdate {
+    name: String!
+    active: Boolean
+}
+
+input LocationQuery {
+    search: String
+    country: String
+    limit: Int
+    offset: Int
+}
+
+type LocationList {
+    items: [Location!]!
+    total: Int!
+}

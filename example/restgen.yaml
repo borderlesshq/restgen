@@ -1,0 +1,9 @@
+package: routes
+output: ./routes
+
+scalars:
+  Time: time.Time
+  ID: string
+
+schemas:
+  - ./*.graphql
