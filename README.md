@@ -14,7 +14,7 @@ A schema-first REST API code generator for Go. Define your API in a GraphQL-like
 ## Installation
 
 ```bash
-go install github.com/borderlesshq/restgen/cmd/restgen@latest
+go install github.com/borderlesshq/restgen@latest
 ```
 
 ## Quick Start
