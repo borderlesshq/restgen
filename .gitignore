@@ -1,2 +1,5 @@
 .idea/
 .DS_Store
+ide-plugins/restgen-intellij-plugin/.gradle
+ide-plugins/restgen-intellij-plugin/.idea
+ide-plugins/restgen-intellij-plugin/build/

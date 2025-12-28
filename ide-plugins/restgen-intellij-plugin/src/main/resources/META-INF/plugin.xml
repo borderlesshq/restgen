@@ -1,0 +1,83 @@
+<idea-plugin>
+    <id>com.borderlesshq.restgen</id>
+    <name>RestGen SDL</name>
+    <vendor email="support@borderlesshq.com" url="https://github.com/borderlesshq/restgen">BorderlessHQ</vendor>
+
+    <description><![CDATA[
+    Language support for RestGen SDL (Schema Definition Language).
+    
+    <h2>Features</h2>
+    <ul>
+        <li>Syntax highlighting for .sdl files</li>
+        <li>Recognition of types, inputs, enums, and Calls</li>
+        <li>Keyword highlighting (type, input, enum, Calls)</li>
+        <li>Directive highlighting (@get, @post, @put, @patch, @delete, @base, @models, @include)</li>
+        <li>Comment support (# and //)</li>
+        <li>String and number highlighting</li>
+        <li>Brace matching</li>
+        <li>Code commenting</li>
+    </ul>
+    
+    <h2>SDL Example</h2>
+    <pre>
+    # @base("/v1/contacts")
+    # @models("github.com/yourorg/app/models")
+    
+    type Contact {
+        id: ID!
+        name: String!
+        email: String
+    }
+    
+    type Calls {
+        getContact(id: ID!): Contact @get("/{id}")
+        createContact(input: CreateContactInput!): Contact! @post("/")
+    }
+    </pre>
+    ]]></description>
+
+    <depends>com.intellij.modules.platform</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <!-- File Type -->
+        <fileType 
+            name="SDL" 
+            implementationClass="com.borderlesshq.restgen.filetype.SdlFileType"
+            fieldName="INSTANCE"
+            language="SDL"
+            extensions="sdl"/>
+        
+        <!-- Syntax Highlighter -->
+        <lang.syntaxHighlighterFactory 
+            language="SDL" 
+            implementationClass="com.borderlesshq.restgen.highlighting.SdlSyntaxHighlighterFactory"/>
+        
+        <!-- Color Settings Page -->
+        <colorSettingsPage 
+            implementation="com.borderlesshq.restgen.highlighting.SdlColorSettingsPage"/>
+        
+        <!-- Brace Matching -->
+        <lang.braceMatcher 
+            language="SDL" 
+            implementationClass="com.borderlesshq.restgen.highlighting.SdlBraceMatcher"/>
+        
+        <!-- Commenter -->
+        <lang.commenter 
+            language="SDL" 
+            implementationClass="com.borderlesshq.restgen.highlighting.SdlCommenter"/>
+
+        <psi.referenceContributor
+                language="SDL"
+                implementation="com.borderlesshq.restgen.reference.SdlReferenceContributor"/>
+
+        <!-- Annotator for directive highlighting and navigation -->
+        <annotator
+                language="SDL"
+                implementationClass="com.borderlesshq.restgen.annotator.SdlAnnotator"/>
+
+        <!-- Goto Declaration Handler for @include navigation -->
+        <gotoDeclarationHandler
+                implementation="com.borderlesshq.restgen.navigation.SdlGotoDeclarationHandler"/>
+
+    </extensions>
+</idea-plugin>
