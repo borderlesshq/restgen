@@ -111,59 +111,70 @@ func runGenerate(args []string) error {
 			return fmt.Errorf("parsing %s: %w", schemaFile, err)
 		}
 
+		// Use default models package from config if not specified in SDL
+		if schema.Models == "" && cfg.Models.Package != "" {
+			schema.Models = cfg.Models.Package
+		}
+
 		// Derive handler name for this schema
-		baseName := strings.Split(filepath.Base(schemaFile), ".")[0]
+		baseName := strings.TrimSuffix(filepath.Base(schemaFile), ".sdl")
 
-		// Generate routes
-		routesContent, err := routesEmitter.Emit(schema)
-		if err != nil {
-			return fmt.Errorf("emitting routes for %s: %w", schemaFile, err)
-		}
-
-		// Output routes file
-		routesFile := filepath.Join(cfg.Output, baseName+"_routes.go")
-
-		// Merge with existing if present
-		result, err := m.Merge(routesContent, routesFile)
-		if err != nil {
-			return fmt.Errorf("merging %s: %w", routesFile, err)
-		}
-
-		if err := os.WriteFile(routesFile, []byte(result.Content), 0644); err != nil {
-			return fmt.Errorf("writing %s: %w", routesFile, err)
-		}
-		fmt.Printf("  → %s\n", routesFile)
-
-		if len(result.PreservedMethods) > 0 {
-			fmt.Printf("    preserved: %v\n", result.PreservedMethods)
-		}
-		if len(result.RemovedMethods) > 0 {
-			fmt.Printf("    removed: %v\n", result.RemovedMethods)
-		}
-
-		// Generate types if models path specified
-		if schema.Models != "" {
-			typesContent, err := typesEmitter.Emit(schema)
+		// Only generate routes if there are Calls defined
+		if len(schema.Calls) > 0 {
+			// Generate routes
+			routesContent, err := routesEmitter.Emit(schema)
 			if err != nil {
-				return fmt.Errorf("emitting types for %s: %w", schemaFile, err)
+				return fmt.Errorf("emitting routes for %s: %w", schemaFile, err)
 			}
 
-			// Derive types output path from models package
-			// e.g., github.com/borderlesshq/api/models -> models/
-			modelsParts := strings.Split(schema.Models, "/")
-			modelsDir := modelsParts[len(modelsParts)-1]
-			typesFile := filepath.Join(modelsDir, baseName+"_types.go")
+			// Output routes file
+			routesFile := filepath.Join(cfg.Output, baseName+"_routes.go")
 
-			if err := os.MkdirAll(modelsDir, 0755); err != nil {
-				return fmt.Errorf("creating models dir: %w", err)
+			// Merge with existing if present
+			result, err := m.Merge(routesContent, routesFile)
+			if err != nil {
+				return fmt.Errorf("merging %s: %w", routesFile, err)
 			}
 
-			if err := os.WriteFile(typesFile, []byte(typesContent), 0644); err != nil {
-				return fmt.Errorf("writing %s: %w", typesFile, err)
+			if err := os.WriteFile(routesFile, []byte(result.Content), 0644); err != nil {
+				return fmt.Errorf("writing %s: %w", routesFile, err)
 			}
-			fmt.Printf("  → %s\n", typesFile)
+			fmt.Printf("  → %s\n", routesFile)
 
-			dirsToFormat[modelsDir] = true
+			if len(result.PreservedMethods) > 0 {
+				fmt.Printf("    preserved: %v\n", result.PreservedMethods)
+			}
+			if len(result.RemovedMethods) > 0 {
+				fmt.Printf("    removed: %v\n", result.RemovedMethods)
+			}
+		}
+
+		// Generate types if models path specified (from SDL or config default)
+		if schema.Models != "" {
+			// Only generate types if there are types, inputs, or enums defined
+			if len(schema.Types) > 0 || len(schema.Inputs) > 0 || len(schema.Enums) > 0 {
+				typesContent, err := typesEmitter.Emit(schema)
+				if err != nil {
+					return fmt.Errorf("emitting types for %s: %w", schemaFile, err)
+				}
+
+				// Derive types output path from models package
+				// e.g., github.com/borderlesshq/api/models -> models/
+				modelsParts := strings.Split(schema.Models, "/")
+				modelsDir := modelsParts[len(modelsParts)-1]
+				typesFile := filepath.Join(modelsDir, baseName+"_types.go")
+
+				if err := os.MkdirAll(modelsDir, 0755); err != nil {
+					return fmt.Errorf("creating models dir: %w", err)
+				}
+
+				if err := os.WriteFile(typesFile, []byte(typesContent), 0644); err != nil {
+					return fmt.Errorf("writing %s: %w", typesFile, err)
+				}
+				fmt.Printf("  → %s\n", typesFile)
+
+				dirsToFormat[modelsDir] = true
+			}
 		}
 	}
 
@@ -227,8 +238,9 @@ func runInit() error {
 package: routes
 output: ./routes
 
-helpers:
-  package: github.com/yourorg/yourapp/pkg/httputil
+# Default models package (can be overridden per SDL with @models)
+models:
+  package: github.com/yourorg/yourapp/models
 
 scalars:
   Time: time.Time

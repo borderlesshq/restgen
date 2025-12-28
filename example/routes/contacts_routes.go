@@ -3,11 +3,13 @@
 package routes
 
 import (
+	"encoding/json"
 	models "example/types"
 	"net/http"
 
 	"github.com/borderlesshq/restgen/shared"
 	"github.com/go-chi/chi/v5"
+	"github.com/gorilla/schema"
 )
 
 // ============================================================================
@@ -79,20 +81,19 @@ func (h *ContactsHandler) RouteMiddleware() map[string][]func(http.Handler) http
 // ============================================================================
 
 func (h *ContactsHandler) CreateContact(w http.ResponseWriter, r *http.Request) {
-	// var input models.CreateContactInput
-	// if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-	//     shared.WriteResponse(w, http.StatusBadRequest, &shared.ApiResponse[*models.Contact]{
-	//         Message: err.Error(),
-	//     })
-	//     return
-	// }
+	var input models.CreateContactInput
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		shared.WriteResponse(w, http.StatusBadRequest, &shared.ApiResponse[*models.Contact]{
+			Message: err.Error(),
+		})
+		return
+	}
 
 	// TODO: implement CreateContact
 	shared.WriteResponse(w, http.StatusNotImplemented, &shared.ApiResponse[*models.Contact]{
 		Message: "CreateContact not implemented",
 	})
 }
-
 func (h *ContactsHandler) GetContact(w http.ResponseWriter, r *http.Request) {
 	// Path parameters:
 	// id := chi.URLParam(r, "id")
@@ -102,24 +103,22 @@ func (h *ContactsHandler) GetContact(w http.ResponseWriter, r *http.Request) {
 		Message: "GetContact not implemented",
 	})
 }
-
 func (h *ContactsHandler) UpdateContact(w http.ResponseWriter, r *http.Request) {
 	// Path parameters:
 	// id := chi.URLParam(r, "id")
-	// var input models.UpdateContactInput
-	// if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-	//     shared.WriteResponse(w, http.StatusBadRequest, &shared.ApiResponse[*models.Contact]{
-	//         Message: err.Error(),
-	//     })
-	//     return
-	// }
+	var input models.UpdateContactInput
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		shared.WriteResponse(w, http.StatusBadRequest, &shared.ApiResponse[*models.Contact]{
+			Message: err.Error(),
+		})
+		return
+	}
 
 	// TODO: implement UpdateContact
 	shared.WriteResponse(w, http.StatusNotImplemented, &shared.ApiResponse[*models.Contact]{
 		Message: "UpdateContact not implemented",
 	})
 }
-
 func (h *ContactsHandler) DeleteContact(w http.ResponseWriter, r *http.Request) {
 	// Path parameters:
 	// id := chi.URLParam(r, "id")
@@ -129,54 +128,51 @@ func (h *ContactsHandler) DeleteContact(w http.ResponseWriter, r *http.Request) 
 		Message: "DeleteContact not implemented",
 	})
 }
-
 func (h *ContactsHandler) ListContacts(w http.ResponseWriter, r *http.Request) {
 	// Query parameters:
-	// var filter models.ContactFilter
-	// decoder := schema.NewDecoder()
-	// decoder.IgnoreUnknownKeys(true)
-	// if err := decoder.Decode(&filter, r.URL.Query()); err != nil {
-	//     shared.WriteResponse(w, http.StatusBadRequest, &shared.ApiResponse[*models.ContactList]{
-	//         Message: err.Error(),
-	//     })
-	//     return
-	// }
+	var filter models.ContactFilter
+	decoder := schema.NewDecoder()
+	decoder.IgnoreUnknownKeys(true)
+	if err := decoder.Decode(&filter, r.URL.Query()); err != nil {
+		shared.WriteResponse(w, http.StatusBadRequest, &shared.ApiResponse[*models.ContactList]{
+			Message: err.Error(),
+		})
+		return
+	}
 
 	// TODO: implement ListContacts
 	shared.WriteResponse(w, http.StatusNotImplemented, &shared.ApiResponse[*models.ContactList]{
 		Message: "ListContacts not implemented",
 	})
 }
-
 func (h *ContactsHandler) UpdateLocation(w http.ResponseWriter, r *http.Request) {
 	// Path parameters:
 	// iso2 := chi.URLParam(r, "iso2")
 	// stateCode := chi.URLParam(r, "stateCode")
-	// var location models.LocationUpdate
-	// if err := json.NewDecoder(r.Body).Decode(&location); err != nil {
-	//     shared.WriteResponse(w, http.StatusBadRequest, &shared.ApiResponse[*models.Location]{
-	//         Message: err.Error(),
-	//     })
-	//     return
-	// }
+	var location models.LocationUpdate
+	if err := json.NewDecoder(r.Body).Decode(&location); err != nil {
+		shared.WriteResponse(w, http.StatusBadRequest, &shared.ApiResponse[*models.Location]{
+			Message: err.Error(),
+		})
+		return
+	}
 
 	// TODO: implement UpdateLocation
 	shared.WriteResponse(w, http.StatusNotImplemented, &shared.ApiResponse[*models.Location]{
 		Message: "UpdateLocation not implemented",
 	})
 }
-
 func (h *ContactsHandler) SearchLocations(w http.ResponseWriter, r *http.Request) {
 	// Query parameters:
-	// var query models.LocationQuery
-	// decoder := schema.NewDecoder()
-	// decoder.IgnoreUnknownKeys(true)
-	// if err := decoder.Decode(&query, r.URL.Query()); err != nil {
-	//     shared.WriteResponse(w, http.StatusBadRequest, &shared.ApiResponse[*models.LocationList]{
-	//         Message: err.Error(),
-	//     })
-	//     return
-	// }
+	var query models.LocationQuery
+	decoder := schema.NewDecoder()
+	decoder.IgnoreUnknownKeys(true)
+	if err := decoder.Decode(&query, r.URL.Query()); err != nil {
+		shared.WriteResponse(w, http.StatusBadRequest, &shared.ApiResponse[*models.LocationList]{
+			Message: err.Error(),
+		})
+		return
+	}
 
 	// TODO: implement SearchLocations
 	shared.WriteResponse(w, http.StatusNotImplemented, &shared.ApiResponse[*models.LocationList]{

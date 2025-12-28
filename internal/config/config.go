@@ -10,8 +10,14 @@ import (
 type Config struct {
 	Package string            `yaml:"package"` // output package name (e.g., "routes")
 	Output  string            `yaml:"output"`  // output directory (e.g., "./routes")
+	Models  ModelsConfig      `yaml:"models"`  // default models package config
 	Scalars map[string]string `yaml:"scalars"` // scalar type mappings
 	Schemas []string          `yaml:"schemas"` // glob patterns for schema files
+}
+
+// ModelsConfig specifies the default models package.
+type ModelsConfig struct {
+	Package string `yaml:"package"` // e.g., "github.com/yourorg/yourapp/models"
 }
 
 // DefaultConfig returns a config with sensible defaults.
@@ -19,10 +25,13 @@ func DefaultConfig() *Config {
 	return &Config{
 		Package: "routes",
 		Output:  "./routes",
+		Models: ModelsConfig{
+			Package: "",
+		},
 		Scalars: map[string]string{
 			"ID":      "string",
 			"String":  "string",
-			"Int":     "int64",
+			"Int":     "int",
 			"Float":   "float64",
 			"Boolean": "bool",
 			"Time":    "time.Time",
