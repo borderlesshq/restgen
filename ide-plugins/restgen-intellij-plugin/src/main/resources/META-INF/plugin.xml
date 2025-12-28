@@ -79,5 +79,8 @@
         <gotoDeclarationHandler
                 implementation="com.borderlesshq.restgen.navigation.SdlGotoDeclarationHandler"/>
 
+        <!-- Bundled color scheme -->
+        <bundledColorScheme path="/colorSchemes/SdlDefault"/>
+
     </extensions>
 </idea-plugin>

@@ -15,7 +15,7 @@ type Contact struct {
 
 type ContactList struct {
 	Items []Contact `json:"items"`
-	Total int64     `json:"total"`
+	Total int       `json:"total"`
 }
 
 type DeleteResult struct {
@@ -30,7 +30,7 @@ type Location struct {
 
 type LocationList struct {
 	Items []Location `json:"items"`
-	Total int64      `json:"total"`
+	Total int        `json:"total"`
 }
 
 type CreateContactInput struct {
@@ -45,8 +45,8 @@ type UpdateContactInput struct {
 
 type ContactFilter struct {
 	Search *string `json:"search,omitempty"`
-	Limit  *int64  `json:"limit,omitempty"`
-	Offset *int64  `json:"offset,omitempty"`
+	Limit  *int    `json:"limit,omitempty"`
+	Offset *int    `json:"offset,omitempty"`
 }
 
 type LocationUpdate struct {
@@ -57,6 +57,6 @@ type LocationUpdate struct {
 type LocationQuery struct {
 	Search  *string `json:"search,omitempty"`
 	Country *string `json:"country,omitempty"`
-	Limit   *int64  `json:"limit,omitempty"`
-	Offset  *int64  `json:"offset,omitempty"`
+	Limit   *int    `json:"limit,omitempty"`
+	Offset  *int    `json:"offset,omitempty"`
 }

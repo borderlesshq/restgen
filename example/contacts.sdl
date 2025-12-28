@@ -1,5 +1,5 @@
-# @base("/v1/contacts")
-# @models("example/types")
+@base("/v1/contacts")
+@models("example/types")
 
 type Calls {
     createContact(input: CreateContactInput!): Contact @post("/")

@@ -63,12 +63,12 @@ func (p *Parser) Parse(content string) (*schema.Schema, error) {
 	s := &schema.Schema{}
 
 	// Parse directives from comments at top
-	// # @base("/v1/contacts")
-	// # @models("github.com/borderlesshq/api/models")
-	// # @include("path/to/other.sdl")
-	baseRe := regexp.MustCompile(`#\s*@base\s*\(\s*"([^"]+)"\s*\)`)
-	modelsRe := regexp.MustCompile(`#\s*@models\s*\(\s*"([^"]+)"\s*\)`)
-	includeRe := regexp.MustCompile(`#\s*@include\s*\(\s*"([^"]+)"\s*\)`)
+	//@base("/v1/contacts")
+	//@models("github.com/borderlesshq/api/models")
+	//@include("path/to/other.sdl")
+	baseRe := regexp.MustCompile(`\s*@base\s*\(\s*"([^"]+)"\s*\)`)
+	modelsRe := regexp.MustCompile(`\s*@models\s*\(\s*"([^"]+)"\s*\)`)
+	includeRe := regexp.MustCompile(`\s*@include\s*\(\s*"([^"]+)"\s*\)`)
 
 	if m := baseRe.FindStringSubmatch(content); len(m) > 1 {
 		s.Base = m[1]
