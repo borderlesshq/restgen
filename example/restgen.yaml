@@ -6,4 +6,4 @@ scalars:
   ID: string
 
 schemas:
-  - ./*.graphql
+  - ./*.sdl

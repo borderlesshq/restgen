@@ -1,2 +1,6 @@
+github.com/borderlesshq/restgen v0.0.0-20251227075809-ae8a956bb4be h1:+w0/Q3cvDwXqCECpL7h8hSf1IvQ4xyo3TyAiRvG9kRo=
+github.com/borderlesshq/restgen v0.0.0-20251227075809-ae8a956bb4be/go.mod h1:G/74hIGYaqvILIhEC++xnb8b39FX/Dj/z2A6y8KaWlo=
 github.com/go-chi/chi/v5 v5.2.3 h1:WQIt9uxdsAbgIYgid+BpYc+liqQZGMHRaUwp0JUcvdE=
 github.com/go-chi/chi/v5 v5.2.3/go.mod h1:L2yAIGWB3H+phAw1NxKwWM+7eUH/lU8pOMm5hHcoops=
+github.com/gorilla/schema v1.4.1 h1:jUg5hUjCSDZpNGLuXQOgIWGdlgrIdYvgQ0wZtdK1M3E=
+github.com/gorilla/schema v1.4.1/go.mod h1:Dg5SSm5PV60mhF2NFaTV1xuYYj8tV8NOPRo4FggUMnM=

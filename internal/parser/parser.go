@@ -111,6 +111,9 @@ func (p *Parser) Parse(content string) (*schema.Schema, error) {
 				return nil, fmt.Errorf("parsing input %s: %w", block.name, err)
 			}
 			s.Inputs = append(s.Inputs, *inputDef)
+		} else if block.kind == "enum" {
+			enumDef := p.parseEnumDef(block.name, block.body)
+			s.Enums = append(s.Enums, *enumDef)
 		}
 	}
 
@@ -150,12 +153,12 @@ type block struct {
 	body string
 }
 
-// extractBlocks extracts type/input blocks handling nested braces.
+// extractBlocks extracts type/input/enum blocks handling nested braces.
 func extractBlocks(content string) []block {
 	var blocks []block
 
-	// Find "type Name {" or "input Name {"
-	re := regexp.MustCompile(`(type|input)\s+(\w+)\s*\{`)
+	// Find "type Name {" or "input Name {" or "enum Name {"
+	re := regexp.MustCompile(`(type|input|enum)\s+(\w+)\s*\{`)
 	matches := re.FindAllStringSubmatchIndex(content, -1)
 
 	for _, match := range matches {
@@ -320,6 +323,24 @@ func (p *Parser) parseInputDef(name, body string) (*schema.InputDef, error) {
 	return &schema.InputDef{Name: name, Fields: fields}, nil
 }
 
+// parseEnumDef parses an enum block into an EnumDef.
+func (p *Parser) parseEnumDef(name, body string) *schema.EnumDef {
+	var values []string
+
+	lines := strings.Split(body, "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		// Skip empty lines and comments
+		// || strings.HasPrefix(line, "//")
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		values = append(values, line)
+	}
+
+	return &schema.EnumDef{Name: name, Values: values}
+}
+
 // parseFields parses field definitions like "id: ID!" or "items: [Contact!]!"
 func (p *Parser) parseFields(body string) ([]schema.Field, error) {
 	var fields []schema.Field
@@ -327,7 +348,8 @@ func (p *Parser) parseFields(body string) ([]schema.Field, error) {
 	lines := strings.Split(body, "\n")
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
-		if line == "" || strings.HasPrefix(line, "#") {
+		// Skip empty lines and comments
+		if line == "" || strings.HasPrefix(line, "#") || strings.HasPrefix(line, "//") {
 			continue
 		}
 

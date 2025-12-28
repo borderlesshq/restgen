@@ -11,6 +11,7 @@ type Schema struct {
 	Calls    []Call
 	Types    []TypeDef
 	Inputs   []InputDef
+	Enums    []EnumDef
 }
 
 // Include represents an imported SDL file.
@@ -49,6 +50,12 @@ type TypeDef struct {
 type InputDef struct {
 	Name   string
 	Fields []Field
+}
+
+// EnumDef represents an enum definition.
+type EnumDef struct {
+	Name   string
+	Values []string
 }
 
 // Field represents a field in a type or input.

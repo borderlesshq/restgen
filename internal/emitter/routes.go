@@ -321,32 +321,32 @@ func (h *{{$.HandlerName}}Handler) {{.HandlerName}}(w http.ResponseWriter, r *ht
 {{- if .PathParams}}
 	// Path parameters:
 {{- range .PathParams}}
-	// {{.}} := chi.URLParam(r, "{{.}}")
+	 // {{.}} := chi.URLParam(r, "{{.}}")
 {{- end}}
 {{- end}}
 {{- if .BodyArg}}
-	// var {{.BodyArg.GoName}} {{.BodyArg.GoType}}
-	// if err := json.NewDecoder(r.Body).Decode(&{{.BodyArg.GoName}}); err != nil {
-	//     shared.WriteResponse(w, http.StatusBadRequest, &shared.ApiResponse[{{.GoReturnType}}]{
-	//         Message: err.Error(),
-	//     })
-	//     return
-	// }
+	 var {{.BodyArg.GoName}} {{.BodyArg.GoType}}
+	 if err := json.NewDecoder(r.Body).Decode(&{{.BodyArg.GoName}}); err != nil {
+	     shared.WriteResponse(w, http.StatusBadRequest, &shared.ApiResponse[{{.GoReturnType}}]{
+	         Message: err.Error(),
+	     })
+	     return
+    }
 {{- end}}
 {{- if .QueryArgs}}
 	// Query parameters:
 {{- $returnType := .GoReturnType}}
 {{- range .QueryArgs}}
 {{- if .IsComplex}}
-	// var {{.GoName}} {{.GoType}}
-	// decoder := schema.NewDecoder()
-	// decoder.IgnoreUnknownKeys(true)
-	// if err := decoder.Decode(&{{.GoName}}, r.URL.Query()); err != nil {
-	//     shared.WriteResponse(w, http.StatusBadRequest, &shared.ApiResponse[{{$returnType}}]{
-	//         Message: err.Error(),
-	//     })
-	//     return
-	// }
+	 var {{.GoName}} {{.GoType}}
+	 decoder := schema.NewDecoder()
+	 decoder.IgnoreUnknownKeys(true)
+	 if err := decoder.Decode(&{{.GoName}}, r.URL.Query()); err != nil {
+	     shared.WriteResponse(w, http.StatusBadRequest, &shared.ApiResponse[{{$returnType}}]{
+	         Message: err.Error(),
+	     })
+	     return
+	 }
 {{- else}}
 	// {{.GoName}} := r.URL.Query().Get("{{.Name}}")
 {{- end}}

@@ -25,7 +25,11 @@ func NewTypesEmitter(cfg *config.Config) *TypesEmitter {
 func (e *TypesEmitter) Emit(s *schema.Schema) (string, error) {
 	data := e.buildTemplateData(s)
 
-	tmpl, err := template.New("types").Parse(typesTemplate)
+	funcMap := template.FuncMap{
+		"title": strings.Title,
+	}
+
+	tmpl, err := template.New("types").Funcs(funcMap).Parse(typesTemplate)
 	if err != nil {
 		return "", fmt.Errorf("parsing template: %w", err)
 	}
@@ -41,8 +45,14 @@ func (e *TypesEmitter) Emit(s *schema.Schema) (string, error) {
 type typesTemplateData struct {
 	Package string
 	Imports []string
+	Enums   []enumDefData
 	Types   []typeDefData
 	Inputs  []typeDefData
+}
+
+type enumDefData struct {
+	Name   string
+	Values []string
 }
 
 type typeDefData struct {
@@ -116,9 +126,19 @@ func (e *TypesEmitter) buildTemplateData(s *schema.Schema) *typesTemplateData {
 		inputs = append(inputs, e.buildTypeDef(t.Name, t.Fields))
 	}
 
+	// Build enum definitions
+	var enums []enumDefData
+	for _, en := range s.Enums {
+		enums = append(enums, enumDefData{
+			Name:   en.Name,
+			Values: en.Values,
+		})
+	}
+
 	return &typesTemplateData{
 		Package: pkg,
 		Imports: imports,
+		Enums:   enums,
 		Types:   types,
 		Inputs:  inputs,
 	}
@@ -214,6 +234,28 @@ import (
 	"{{.}}"
 {{- end}}
 )
+{{end}}
+{{- range $enum := .Enums}}
+
+type {{$enum.Name}} string
+
+const (
+{{- range $v := $enum.Values}}
+	{{$enum.Name}}{{$v | title}} {{$enum.Name}} = "{{$v}}"
+{{- end}}
+)
+
+func (e {{$enum.Name}}) IsValid() bool {
+	switch e {
+	case {{range $i, $v := $enum.Values}}{{if $i}}, {{end}}{{$enum.Name}}{{$v | title}}{{end}}:
+		return true
+	}
+	return false
+}
+
+func (e {{$enum.Name}}) String() string {
+	return string(e)
+}
 {{end}}
 {{range .Types}}
 type {{.Name}} struct {

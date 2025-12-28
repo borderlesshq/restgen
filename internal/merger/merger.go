@@ -1,6 +1,9 @@
 package merger
 
 import (
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"os"
 	"regexp"
 	"strings"
@@ -61,12 +64,13 @@ func (m *Merger) MergeContent(generated, existing string) (*MergeResult, error) 
 		newMethodNames[name] = true
 	}
 
-	// Preserve implementations for methods that still exist in schema
+	// Preserve ALL existing methods that still exist in schema
+	// Use AST to check if the method body is non-trivial (not just a stub)
 	preservedMethods := make(map[string]string)
 	for name, impl := range existingMethods {
 		if newMethodNames[name] {
-			// Method still in schema - check if user has implemented it
-			if !isStubImplementation(impl) {
+			// Method still in schema - always preserve if it has real code
+			if !isGeneratedStub(impl) {
 				preservedMethods[name] = impl
 				result.PreservedMethods = append(result.PreservedMethods, name)
 			}
@@ -105,27 +109,203 @@ func (m *Merger) MergeContent(generated, existing string) (*MergeResult, error) 
 		belowMarker.WriteString("\n*/")
 	}
 
-	// Preserve user-edited applyMiddleware and RouteMiddleware
-	applyMw := extractFunction(existing, "applyMiddleware")
-	routeMw := extractFunction(existing, "RouteMiddleware")
-
-	// Rebuild above-marker with preserved middleware functions
-	aboveContent := generatedAbove
-	if applyMw != "" && !isDefaultApplyMiddleware(applyMw) {
-		aboveContent = replaceFunction(aboveContent, "applyMiddleware", applyMw)
-	}
-	if routeMw != "" && !isDefaultRouteMiddleware(routeMw) {
-		aboveContent = replaceFunction(aboveContent, "RouteMiddleware", routeMw)
-	}
-
-	// Also preserve handler struct fields
-	existingStruct := extractHandlerStruct(existing)
-	if existingStruct != "" && !isEmptyHandlerStruct(existingStruct) {
-		aboveContent = replaceHandlerStruct(aboveContent, existingStruct)
-	}
-
-	result.Content = aboveContent + "\n" + marker + belowMarker.String()
+	result.Content = generatedAbove + "\n" + marker + belowMarker.String()
 	return result, nil
+}
+
+// isGeneratedStub uses Go AST to check if a method is an unmodified generated stub.
+// A stub has exactly the pattern:
+//   - Optional: commented decode code (comments are ignored by AST)
+//   - Optional: var declaration + if decode error block
+//   - A single WriteResponse call with StatusNotImplemented
+func isGeneratedStub(impl string) bool {
+	// Quick check: if it doesn't have the stub markers, it's not a stub
+	if !strings.Contains(impl, "StatusNotImplemented") {
+		return false
+	}
+
+	// Wrap the method in a package to make it parseable
+	src := "package stub\n" + impl
+
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, "", src, parser.ParseComments)
+	if err != nil {
+		// If we can't parse it, assume it's been modified and preserve it
+		return false
+	}
+
+	// Find the function declaration
+	var funcDecl *ast.FuncDecl
+	for _, decl := range f.Decls {
+		if fd, ok := decl.(*ast.FuncDecl); ok {
+			funcDecl = fd
+			break
+		}
+	}
+
+	if funcDecl == nil || funcDecl.Body == nil {
+		return false
+	}
+
+	// Analyze the statements to determine if this is a stub
+	// A generated stub has a specific pattern:
+	// 1. Optional: var decl + if decode error (for body/query params)
+	// 2. Final: WriteResponse with StatusNotImplemented
+
+	statements := funcDecl.Body.List
+	if len(statements) == 0 {
+		return false
+	}
+
+	// Check if the last statement is the NotImplemented response
+	lastStmt := statements[len(statements)-1]
+	if !isNotImplementedResponse(lastStmt) {
+		return false
+	}
+
+	// Check all other statements - they should only be decode-related
+	for i := 0; i < len(statements)-1; i++ {
+		if !isDecodeRelatedStatement(statements[i]) {
+			// Found a statement that's not part of the template
+			return false
+		}
+	}
+
+	return true
+}
+
+// isNotImplementedResponse checks if a statement is the WriteResponse with StatusNotImplemented
+func isNotImplementedResponse(stmt ast.Stmt) bool {
+	exprStmt, ok := stmt.(*ast.ExprStmt)
+	if !ok {
+		return false
+	}
+
+	call, ok := exprStmt.X.(*ast.CallExpr)
+	if !ok {
+		return false
+	}
+
+	// Check if it's a WriteResponse call
+	switch fn := call.Fun.(type) {
+	case *ast.SelectorExpr:
+		if fn.Sel.Name != "WriteResponse" {
+			return false
+		}
+	case *ast.Ident:
+		if fn.Name != "writeResponse" && fn.Name != "WriteResponse" {
+			return false
+		}
+	default:
+		return false
+	}
+
+	// Check if second argument is http.StatusNotImplemented
+	if len(call.Args) >= 2 {
+		if sel, ok := call.Args[1].(*ast.SelectorExpr); ok {
+			if sel.Sel.Name == "StatusNotImplemented" {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+// isDecodeRelatedStatement checks if a statement is part of the generated decode template
+func isDecodeRelatedStatement(stmt ast.Stmt) bool {
+	switch s := stmt.(type) {
+	case *ast.DeclStmt:
+		// var declarations for decode targets (var input models.X)
+		return true
+	case *ast.AssignStmt:
+		// decoder := schema.NewDecoder() or similar
+		for _, rhs := range s.Rhs {
+			if containsDecoderSetup(rhs) {
+				return true
+			}
+		}
+		return false
+	case *ast.ExprStmt:
+		// decoder.IgnoreUnknownKeys(true) or similar
+		if call, ok := s.X.(*ast.CallExpr); ok {
+			if sel, ok := call.Fun.(*ast.SelectorExpr); ok {
+				if sel.Sel.Name == "IgnoreUnknownKeys" {
+					return true
+				}
+			}
+		}
+		return false
+	case *ast.IfStmt:
+		// if err := decoder.Decode(...); err != nil { WriteResponse(...) return }
+		return isDecodeErrorIf(s)
+	}
+	return false
+}
+
+// isDecodeErrorIf checks if an if statement is the decode error handling pattern
+func isDecodeErrorIf(stmt *ast.IfStmt) bool {
+	// Pattern: if err := json.NewDecoder(...).Decode(...); err != nil { ... return }
+	// or: if err := decoder.Decode(...); err != nil { ... return }
+	if stmt.Init == nil {
+		return false
+	}
+
+	assign, ok := stmt.Init.(*ast.AssignStmt)
+	if !ok {
+		return false
+	}
+
+	// Check if RHS contains Decode call
+	for _, rhs := range assign.Rhs {
+		if containsDecodeCall(rhs) {
+			// Also verify the body ends with return
+			if stmt.Body != nil && len(stmt.Body.List) > 0 {
+				lastStmt := stmt.Body.List[len(stmt.Body.List)-1]
+				if _, ok := lastStmt.(*ast.ReturnStmt); ok {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
+// containsDecoderSetup checks if an expression is decoder setup
+func containsDecoderSetup(expr ast.Expr) bool {
+	switch e := expr.(type) {
+	case *ast.CallExpr:
+		if sel, ok := e.Fun.(*ast.SelectorExpr); ok {
+			if sel.Sel.Name == "NewDecoder" {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// containsDecodeCall recursively checks if an expression contains a Decode call
+func containsDecodeCall(expr ast.Expr) bool {
+	switch e := expr.(type) {
+	case *ast.CallExpr:
+		if sel, ok := e.Fun.(*ast.SelectorExpr); ok {
+			if sel.Sel.Name == "Decode" {
+				return true
+			}
+		}
+		// Check nested calls (e.g., json.NewDecoder(r.Body).Decode(&x))
+		if containsDecodeCall(e.Fun) {
+			return true
+		}
+		for _, arg := range e.Args {
+			if containsDecodeCall(arg) {
+				return true
+			}
+		}
+	case *ast.SelectorExpr:
+		return containsDecodeCall(e.X)
+	}
+	return false
 }
 
 func splitAtMarker(content string) (above, below string) {
@@ -217,77 +397,4 @@ func extractRemovedSection(content string) []methodBlock {
 	}
 
 	return methods
-}
-
-func isStubImplementation(impl string) bool {
-	return strings.Contains(impl, "TODO: implement") &&
-		strings.Contains(impl, "StatusNotImplemented")
-}
-
-func extractFunction(content, funcName string) string {
-	// Find "func (h *SomethingHandler) funcName("
-	re := regexp.MustCompile(`func \(h \*\w+Handler\) ` + funcName + `\(`)
-	loc := re.FindStringIndex(content)
-	if loc == nil {
-		return ""
-	}
-
-	funcStart := loc[0]
-
-	// Find the opening brace
-	braceIdx := strings.Index(content[funcStart:], "{")
-	if braceIdx == -1 {
-		return ""
-	}
-	braceIdx += funcStart
-
-	// Find matching closing brace
-	depth := 1
-	bodyEnd := braceIdx + 1
-
-	for i := braceIdx + 1; i < len(content) && depth > 0; i++ {
-		if content[i] == '{' {
-			depth++
-		} else if content[i] == '}' {
-			depth--
-			if depth == 0 {
-				bodyEnd = i + 1
-			}
-		}
-	}
-
-	return content[funcStart:bodyEnd]
-}
-
-func isDefaultApplyMiddleware(impl string) bool {
-	// Check if it's still the default generated stub
-	return strings.Contains(impl, "// Example:") &&
-		!strings.Contains(impl, "r.Use(")
-}
-
-func isDefaultRouteMiddleware(impl string) bool {
-	return strings.Contains(impl, `// "POST /":`)
-}
-
-func replaceFunction(content, funcName, newImpl string) string {
-	re := regexp.MustCompile(`(?s)func \(h \*\w+Handler\) ` + funcName + `\([^)]*\)[^{]*\{[^}]*(?:\{[^}]*\}[^}]*)*\}`)
-	return re.ReplaceAllString(content, newImpl)
-}
-
-func extractHandlerStruct(content string) string {
-	re := regexp.MustCompile(`(?s)(type \w+Handler struct \{[^}]*\})`)
-	m := re.FindStringSubmatch(content)
-	if len(m) > 1 {
-		return m[1]
-	}
-	return ""
-}
-
-func isEmptyHandlerStruct(structDef string) bool {
-	return strings.Contains(structDef, "// add dependencies here")
-}
-
-func replaceHandlerStruct(content, newStruct string) string {
-	re := regexp.MustCompile(`(?s)type \w+Handler struct \{[^}]*\}`)
-	return re.ReplaceAllString(content, newStruct)
 }
