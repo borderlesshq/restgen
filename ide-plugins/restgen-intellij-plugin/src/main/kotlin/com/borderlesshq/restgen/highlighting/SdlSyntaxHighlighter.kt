@@ -69,6 +69,8 @@ class SdlSyntaxHighlighter : SyntaxHighlighterBase() {
         private val BAD_CHARACTER_KEYS = arrayOf(BAD_CHARACTER_KEY)
         private val EMPTY_KEYS = emptyArray<TextAttributesKey>()
         private val DIRECTIVE_COMMENT_KEYS = arrayOf(DIRECTIVE_COMMENT)
+//        private val INCLUDE_LINK_KEYS = arrayOf(INCLUDE_LINK)
+//        private val INCLUDE_LINK_UNRESOLVED_KEYS = arrayOf(INCLUDE_LINK_UNRESOLVED)
     }
     
     override fun getHighlightingLexer(): Lexer = SdlLexer()
@@ -102,7 +104,7 @@ class SdlSyntaxHighlighter : SyntaxHighlighterBase() {
             SdlTokenTypes.DIRECTIVE_COMMENT_INCLUDE,
             SdlTokenTypes.DIRECTIVE_COMMENT_BASE,
             SdlTokenTypes.DIRECTIVE_COMMENT_MODELS -> DIRECTIVE_COMMENT_KEYS
-            
+
             // Comments
             SdlTokenTypes.COMMENT -> COMMENT_KEYS
             

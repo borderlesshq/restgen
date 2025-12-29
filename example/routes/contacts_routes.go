@@ -17,7 +17,7 @@ import (
 // ============================================================================
 
 type ContactsHandler struct {
-	// add dependencies here
+	something bool
 }
 
 type ContactsParam func(*ContactsHandler)

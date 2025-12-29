@@ -44,12 +44,16 @@ func (m *Merger) Merge(generated, existingPath string) (*MergeResult, error) {
 }
 
 // MergeContent merges generated content with existing content.
+// MergeContent merges generated content with existing content.
 func (m *Merger) MergeContent(generated, existing string) (*MergeResult, error) {
 	result := &MergeResult{}
 
 	// Split existing file at marker
-	_, existingBelow := splitAtMarker(existing)
+	existingAbove, existingBelow := splitAtMarker(existing)
 	generatedAbove, generatedBelow := splitAtMarker(generated)
+
+	// Preserve handler struct fields from existing above-marker content
+	mergedAbove := preserveHandlerStructFields(generatedAbove, existingAbove)
 
 	// Extract method implementations from existing below-marker content
 	existingMethods := extractMethods(existingBelow)
@@ -109,8 +113,79 @@ func (m *Merger) MergeContent(generated, existing string) (*MergeResult, error) 
 		belowMarker.WriteString("\n*/")
 	}
 
-	result.Content = generatedAbove + "\n" + marker + belowMarker.String()
+	result.Content = mergedAbove + "\n" + marker + belowMarker.String()
 	return result, nil
+}
+
+// preserveHandlerStructFields extracts the handler struct from existing content
+// and merges its fields into the generated content.
+func preserveHandlerStructFields(generated, existing string) string {
+	// Extract handler struct from existing
+	existingStruct := extractHandlerStruct(existing)
+	if existingStruct == "" {
+		return generated
+	}
+
+	// Check if existing struct has custom fields (not just the comment)
+	if isEmptyHandlerStruct(existingStruct) {
+		return generated
+	}
+
+	// Extract handler struct from generated
+	generatedStruct := extractHandlerStruct(generated)
+	if generatedStruct == "" {
+		return generated
+	}
+
+	// Replace the generated struct with the existing one
+	return strings.Replace(generated, generatedStruct, existingStruct, 1)
+}
+
+// extractHandlerStruct extracts the handler struct definition including its body.
+// Matches: type XxxHandler struct { ... }
+func extractHandlerStruct(content string) string {
+	re := regexp.MustCompile(`type\s+\w+Handler\s+struct\s*\{`)
+	match := re.FindStringIndex(content)
+	if match == nil {
+		return ""
+	}
+
+	start := match[0]
+	braceStart := match[1] - 1
+
+	// Find matching closing brace
+	depth := 1
+	end := braceStart + 1
+	for i := braceStart + 1; i < len(content) && depth > 0; i++ {
+		if content[i] == '{' {
+			depth++
+		} else if content[i] == '}' {
+			depth--
+			if depth == 0 {
+				end = i + 1
+			}
+		}
+	}
+
+	return content[start:end]
+}
+
+// isEmptyHandlerStruct checks if the struct only contains the default comment.
+func isEmptyHandlerStruct(structDef string) bool {
+	// Remove the struct wrapper
+	inner := structDef
+	if idx := strings.Index(inner, "{"); idx != -1 {
+		inner = inner[idx+1:]
+	}
+	if idx := strings.LastIndex(inner, "}"); idx != -1 {
+		inner = inner[:idx]
+	}
+
+	// Trim whitespace and check if only contains the default comment or is empty
+	inner = strings.TrimSpace(inner)
+	return inner == "" ||
+		inner == "// add dependencies here" ||
+		strings.HasPrefix(inner, "// add dependencies here") && strings.TrimSpace(strings.TrimPrefix(inner, "// add dependencies here")) == ""
 }
 
 // isGeneratedStub uses Go AST to check if a method is an unmodified generated stub.
