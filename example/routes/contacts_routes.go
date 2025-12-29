@@ -43,6 +43,7 @@ func (h *ContactsHandler) Routes() chi.Router {
 	r := chi.NewRouter()
 	h.applyMiddleware(r)
 	r.Post("/", h.CreateContact)
+	r.Post("/", h.PatchContacts)
 	r.Get("/{id}", h.GetContact)
 	r.Put("/{id}", h.UpdateContact)
 	r.Delete("/{id}", h.DeleteContact)
@@ -81,8 +82,8 @@ func (h *ContactsHandler) RouteMiddleware() map[string][]func(http.Handler) http
 // ============================================================================
 
 func (h *ContactsHandler) CreateContact(w http.ResponseWriter, r *http.Request) {
-	var input models.CreateContactInput
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+	var payload models.CreateContactInput
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		shared.WriteResponse(w, http.StatusBadRequest, &shared.ApiResponse[*models.Contact]{
 			Message: err.Error(),
 		})
@@ -92,6 +93,20 @@ func (h *ContactsHandler) CreateContact(w http.ResponseWriter, r *http.Request) 
 	// TODO: implement CreateContact
 	shared.WriteResponse(w, http.StatusNotImplemented, &shared.ApiResponse[*models.Contact]{
 		Message: "CreateContact not implemented",
+	})
+}
+func (h *ContactsHandler) PatchContacts(w http.ResponseWriter, r *http.Request) {
+	var payload []models.CreateContactInput
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		shared.WriteResponse(w, http.StatusBadRequest, &shared.ApiResponse[*models.Contact]{
+			Message: err.Error(),
+		})
+		return
+	}
+
+	// TODO: implement PatchContacts
+	shared.WriteResponse(w, http.StatusNotImplemented, &shared.ApiResponse[*models.Contact]{
+		Message: "PatchContacts not implemented",
 	})
 }
 func (h *ContactsHandler) GetContact(w http.ResponseWriter, r *http.Request) {

@@ -2,7 +2,8 @@
 @models("example/types")
 
 type Calls {
-    createContact(input: CreateContactInput!): Contact @post("/")
+    createContact(payload: CreateContactInput!): Contact @post("/")
+    patchContacts(payload: [CreateContactInput!]!): Contact @post("/")
     getContact(id: ID!): Contact @get("/{id}")
     updateContact(id: ID!, input: UpdateContactInput!): Contact @put("/{id}")
     deleteContact(id: ID!): DeleteResult @delete("/{id}")

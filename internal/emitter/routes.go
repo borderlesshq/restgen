@@ -175,11 +175,15 @@ func (e *RoutesEmitter) buildTemplateData(s *schema.Schema) *templateData {
 		}
 
 		if body := c.BodyArg(); body != nil {
+			bodyGoType := resolveGoType(body.Type)
+			if body.IsList {
+				bodyGoType = "[]" + bodyGoType
+			}
 			cd.BodyArg = &argData{
 				Name:   body.Name,
 				GoName: body.Name,
 				Type:   body.Type,
-				GoType: resolveGoType(body.Type),
+				GoType: bodyGoType,
 			}
 		}
 
